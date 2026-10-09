@@ -16,8 +16,9 @@ npm run preview      # preview the production build
 ```
 
 ## 3. Calculation rules
-- `Interest = Principal × Rate/100 × Days/365`; `Total = Principal + Interest`
-- `Monthly interest = Principal × Rate ÷ (100 × 12)`
+- Monthly interest rate is the default. A yearly rate can also be selected and is converted to a monthly rate by dividing by 12.
+- `Monthly interest = Principal × Monthly rate ÷ 100`; a yearly rate's monthly equivalent is `Yearly rate ÷ 12`.
+- The selected date range is split at calendar-month boundaries. Each month's interest is prorated by `days in period ÷ days in that calendar month`; interest does not compound.
 - `Days = End date − Start date` (no extra day added). Dates are handled as UTC calendar dates, so timezones never shift a day.
 - Calendar duration: a month is complete when end day ≥ start day; leftover days are counted from the month anchor (start + whole months, clamped to month end).
 - Month-by-month table splits the range at calendar-month boundaries. Segment interest = difference of rounded cumulative interest, so segments always sum exactly to the total.
@@ -27,7 +28,6 @@ npm run preview      # preview the production build
 ## 4. Settings (`src/config/appConfig.js`)
 | Setting | How |
 |---|---|
-| Day-count convention | `DAY_COUNT_BASIS = 365` → change to `366`, rebuild. Shown in the UI and used everywhere. |
 | Default currency | `DEFAULT_CURRENCY = 'INR'` → `'USD'` |
 | Limits | `MAX_PRINCIPAL`, `MAX_RATE` |
 

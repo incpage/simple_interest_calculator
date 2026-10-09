@@ -31,15 +31,20 @@ export default function CalculatorForm({ values, errors, onChange, onCalculate, 
   return (
     <form className="card" noValidate onSubmit={(e) => { e.preventDefault(); onCalculate(); }}>
       <h2>{t('form.heading')}</h2>
-      {errors.config && <p className="error" role="alert">{t(`errors.${errors.config}`)}</p>}
       <div className="grid-2">
         <Field id="principal" label={t('form.principal')} help={t('form.principalHelp')} error={errors.principal}>
           <input id="principal" type="text" inputMode="decimal" autoComplete="off" placeholder="100000"
                  value={values.principal} onChange={set('principal')} {...aria('principal', errors.principal)} />
         </Field>
-        <Field id="rate" label={t('form.rate')} help={t('form.rateHelp')} error={errors.rate}>
-          <input id="rate" type="text" inputMode="decimal" autoComplete="off" placeholder="12"
-                 value={values.rate} onChange={set('rate')} {...aria('rate', errors.rate)} />
+        <Field id="rate" label={t('form.rate')} help={t('form.rateHelp')} error={errors.rate || errors.ratePeriod}>
+          <select id="ratePeriod" value={values.ratePeriod} onChange={set('ratePeriod')}
+                  aria-label={t('form.ratePeriod')} {...aria('rate', errors.rate || errors.ratePeriod)}>
+            <option value="monthly">{t('form.monthly')}</option>
+            <option value="yearly">{t('form.yearly')}</option>
+          </select>
+          <input id="rate" type="text" inputMode="decimal" autoComplete="off"
+                 placeholder={values.ratePeriod === 'yearly' ? '12' : '1'}
+                 value={values.rate} onChange={set('rate')} {...aria('rate', errors.rate || errors.ratePeriod)} />
         </Field>
         <Field id="from" label={t('form.from')} help={t('form.fromHelp')} error={errors.from} preview={preview(values.from)}>
           <input id="from" type="date" value={values.from} onChange={set('from')} {...aria('from', errors.from)} />

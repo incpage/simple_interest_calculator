@@ -13,7 +13,7 @@ import { calculateInterest } from './utils/interestCalculator.js';
 import { todayISO } from './utils/dateCalculations.js';
 import { DEFAULT_CURRENCY } from './config/appConfig.js';
 
-const emptyForm = () => ({ principal: '', rate: '', from: '', to: todayISO() });
+const emptyForm = () => ({ principal: '', rate: '', ratePeriod: 'monthly', from: '', to: todayISO() });
 
 // Google AdSense and custom ads are separate components, rendered side by side.
 const Ads = ({ p, className }) => (
@@ -36,7 +36,7 @@ export default function App() {
     else { setErrors(r.errors); setResult(null); }
   };
   const reset = () => { setForm(emptyForm()); setErrors({}); setResult(null); };
-  const sample = () => { setForm({ principal: '100000', rate: '12', from: '2026-01-01', to: '2026-04-15' }); setErrors({}); setResult(null); };
+  const sample = () => { setForm({ principal: '100000', rate: '1', ratePeriod: 'monthly', from: '2026-01-01', to: '2026-04-15' }); setErrors({}); setResult(null); };
 
   return (
     <>
