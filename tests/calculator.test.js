@@ -4,8 +4,8 @@ import { parseISODate, calendarDuration, weeksAndDays } from '../src/utils/dateC
 import { formatCurrency } from '../src/utils/currencyFormatter.js';
 import i18n from '../src/i18n/i18n.js';
 
-const calc = (principal, rate, from, to, ratePeriod = 'yearly') =>
-  calculateInterest({ principal, rate, ratePeriod, from, to });
+// Convention for all tests: Interest = P x R/100 x Days/365 (days = end - start)
+const calc = (principal, rate, from, to, opts) => calculateInterest({ principal, rate, rateType: 'annual', from, to }, opts);
 
 describe('simple interest engine', () => {
   it('1. one year = 12000 interest, 112000 total', () => {
@@ -15,16 +15,16 @@ describe('simple interest engine', () => {
     expect(r.total).toBe(112000);
     expect(r.monthlyInterest).toBe(1000);
   });
-  it('2. one month uses the monthly equivalent of the yearly rate', () => {
+  it('2. one month (31 days)', () => {
     const r = calc('100000', '12', '2026-01-01', '2026-02-01');
     expect(r.totalDays).toBe(31);
-    expect(r.interest).toBe(1000);
+    expect(r.interest).toBe(1019.18);
     expect(r.calendar).toEqual({ years: 0, months: 1, days: 0 });
   });
   it('3. one day', () => {
     const r = calc('100000', '12', '2026-01-01', '2026-01-02');
     expect(r.totalDays).toBe(1);
-    expect(r.interest).toBe(32.26);
+    expect(r.interest).toBe(32.88);
   });
   it('4. zero-day period gives zero interest and no segments', () => {
     const r = calc('100000', '12', '2026-01-01', '2026-01-01');
@@ -33,10 +33,12 @@ describe('simple interest engine', () => {
     expect(r.total).toBe(100000);
     expect(r.segments).toEqual([]);
   });
-  it('5. leap-year range accrues one monthly rate for each calendar month', () => {
-    const r = calc('100000', '12', '2024-01-01', '2025-01-01');
-    expect(r.totalDays).toBe(366);
-    expect(r.interest).toBe(12000);
+  it('5. leap-year range uses 366 elapsed days; basis is explicit, not silent', () => {
+    const r365 = calc('100000', '12', '2024-01-01', '2025-01-01');
+    expect(r365.totalDays).toBe(366);
+    expect(r365.interest).toBe(12032.88);
+    const r366 = calc('100000', '12', '2024-01-01', '2025-01-01', { basis: 366 });
+    expect(r366.interest).toBe(12000);
   });
   it('6. multi-year range', () => {
     const r = calc('50000', '10', '2023-03-15', '2026-03-15');
@@ -46,7 +48,7 @@ describe('simple interest engine', () => {
   it('7. partial calendar month is charged only for its days', () => {
     const r = calc('100000', '12', '2026-01-20', '2026-02-10');
     expect(r.segments.map((s) => s.days)).toEqual([12, 9]);
-    expect(r.segments[0].interest).toBe(387.1);
+    expect(r.segments[0].interest).toBe(394.52);
   });
   it('7b. documented example 01 Jan - 15 Apr 2026', () => {
     const r = calc('100000', '12', '2026-01-01', '2026-04-15');
@@ -81,25 +83,7 @@ describe('simple interest engine', () => {
     expect(validateInputs({ ...base, principal: '10', rate: '-1' }).rate).toBe('rateNegative');
     expect(validateInputs({ ...base, principal: '10', rate: '5', from: '2026-02-30' }).from).toBe('fromInvalid');
     expect(validateInputs({ ...base, principal: '10', rate: '5', to: 'xx' }).to).toBe('toInvalid');
-    expect(validateInputs({ ...base, principal: '10', rate: '5', ratePeriod: 'daily' }).ratePeriod).toBe('ratePeriodInvalid');
-  });
-  it('monthly rate is the default and yearly rates convert to an equivalent monthly rate', () => {
-    const monthly = calculateInterest({
-      principal: '100000', rate: '1', from: '2026-01-01', to: '2026-02-01',
-    });
-    const yearly = calc('100000', '12', '2026-01-01', '2026-02-01', 'yearly');
-    expect(monthly.ok).toBe(true);
-    expect(monthly.ratePeriod).toBe('monthly');
-    expect(monthly.monthlyRate).toBe(1);
-    expect(monthly.interest).toBe(1000);
-    expect(yearly.interest).toBe(monthly.interest);
-  });
-  it('prorates a monthly rate by the actual number of days in a partial calendar month', () => {
-    const r = calculateInterest({
-      principal: '100000', rate: '1', from: '2026-01-01', to: '2026-01-16',
-    });
-    expect(r.interest).toBe(483.87);
-    expect(r.monthlyInterest).toBe(1000);
+    expect(validateInputs({ ...base, principal: '10', rate: '5' }, 360).config).toBe('configInvalid');
   });
   it('12. month-by-month interest sums to total interest', () => {
     for (const [p, rt, a, b] of [
@@ -143,5 +127,37 @@ describe('language independence', () => {
     }
     await i18n.changeLanguage('te');
     expect(i18n.t('app.title')).not.toBe(enTitle);
+  });
+});
+
+describe('monthly rate (default)', () => {
+  const m = (p, r, a, b) => calculateInterest({ principal: p, rate: r, rateType: 'monthly', from: a, to: b });
+  it('100 at 2% per month for 1 month = 2', () => {
+    const r = m('100', '2', '2026-01-01', '2026-02-01');
+    expect(r.interest).toBe(2);
+    expect(r.total).toBe(102);
+    expect(r.monthlyInterest).toBe(2);
+  });
+  it('30 days counts as one month of interest', () => {
+    expect(m('100', '2', '2026-01-01', '2026-01-31').interest).toBe(2);
+    expect(m('100', '2', '2026-01-01', '2026-01-16').interest).toBe(1);
+  });
+  it('3 months 14 days', () => {
+    expect(m('100000', '2', '2026-01-01', '2026-04-15').interest).toBe(6933.33);
+  });
+  it('monthly is the default when rateType is omitted', () => {
+    const r = calculateInterest({ principal: '100', rate: '2', from: '2026-01-01', to: '2026-02-01' });
+    expect(r.rateType).toBe('monthly');
+    expect(r.interest).toBe(2);
+  });
+  it('annual 24% shows the same 2.00 monthly interest on 100', () => {
+    expect(calc('100', '24', '2026-01-01', '2026-02-01').monthlyInterest).toBe(2);
+  });
+  it('segments sum to total in monthly mode', () => {
+    const r = m('12345.67', '1.75', '2025-11-17', '2026-09-03');
+    expect(Math.round(r.segments.reduce((s, x) => s + x.interest, 0) * 100) / 100).toBe(r.interest);
+  });
+  it('rejects an unknown rate type', () => {
+    expect(calculateInterest({ principal: '1', rate: '1', rateType: 'weekly', from: '2026-01-01', to: '2026-02-01' }).ok).toBe(false);
   });
 });

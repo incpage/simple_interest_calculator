@@ -9,16 +9,19 @@ export default function ResultsSummary({ result, currency, onClear }) {
   const lang = i18n.language;
   const money = (v) => formatCurrency(v, currency, lang);
   const num = (v) => formatNumber(v, lang);
+  const monthly = result.rateType === 'monthly';
+  const rateText = t(monthly ? 'results.rateValueMonthly' : 'results.rateValue', { rate: num(result.rate) });
   const days = t('results.daysValue', { n: formatNumber(result.totalDays, lang, 0) });
-  const rateUnit = result.ratePeriod === 'yearly' ? t('results.ratePeriodYearly') : t('results.ratePeriodMonthly');
-  const formula = `${t('results.rateValue', { rate: num(result.rate), period: rateUnit })} · ${t('results.monthlyRate')}: ${num(result.monthlyRate)}%`;
+  const formula = monthly
+    ? `${num(result.principal)} × ${num(result.rate)} ÷ 100 × ${num(result.totalMonths)} = ${money(result.interest)}`
+    : `${num(result.principal)} × ${num(result.rate)} × ${num(result.totalDays)} ÷ (100 × ${result.basis}) = ${money(result.interest)}`;
 
   const lines = [
     t('app.title'),
     `${t('results.start')}: ${formatDate(result.from, lang)}`,
     `${t('results.end')}: ${formatDate(result.to, lang)}`,
     `${t('results.principal')}: ${money(result.principal)}`,
-    `${t('results.rate')}: ${t('results.rateValue', { rate: num(result.rate), period: rateUnit })}`,
+    `${t('results.rate')}: ${rateText}`,
     `${t('results.monthly')}: ${money(result.monthlyInterest)}`,
     `${t('results.totalDays')}: ${days}`,
     `${t('results.interest')}: ${money(result.interest)}`,
@@ -42,13 +45,13 @@ export default function ResultsSummary({ result, currency, onClear }) {
 
   const cards = [
     [t('results.principal'), money(result.principal)],
-    [t('results.rate'), t('results.rateValue', { rate: num(result.rate), period: rateUnit })],
+    [t('results.rate'), rateText],
     [t('results.monthly'), money(result.monthlyInterest), t('results.monthlyHelp')],
     [t('results.interest'), money(result.interest)],
   ];
   const breakdown = [
     [t('results.principal'), money(result.principal)],
-    [t('results.rate'), t('results.rateValue', { rate: num(result.rate), period: rateUnit })],
+    [t('results.rate'), rateText],
     [t('results.monthly'), money(result.monthlyInterest)],
     [t('results.totalDays'), days],
     [t('results.interest'), money(result.interest)],
@@ -92,9 +95,9 @@ export default function ResultsSummary({ result, currency, onClear }) {
 
       <div className="card">
         <h3>{t('results.formulaTitle')}</h3>
-        <p className="formula">{t('results.formulaGeneric')}</p>
+        <p className="formula">{t(monthly ? 'results.formulaMonthly' : 'results.formulaGeneric', { basis: result.basis })}</p>
         <p className="formula formula-values">{formula}</p>
-        <p className="note">{t('results.monthlyCalculationNote')}</p>
+        <p className="note">{t(monthly ? 'results.monthlyBasisNote' : 'results.basisNote', { basis: result.basis })}</p>
       </div>
 
       <div className="card final-summary">

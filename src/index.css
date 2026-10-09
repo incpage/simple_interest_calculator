@@ -32,10 +32,10 @@ h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); } h2 { font-size: 1.25rem; } h3 { fo
 .grid-2 { display: grid; gap: 1rem; } @media (min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
 .field label { display: flex; align-items: center; gap: .35rem; font-weight: 600; color: var(--navy); margin-bottom: .35rem; }
 .info { color: var(--teal-dark); cursor: help; flex: none; }
-input[type=text], input[type=date], .field select { width: 100%; min-height: 48px; padding: .6rem .85rem; font: inherit; color: var(--text);
+input[type=text], input[type=date] { width: 100%; min-height: 48px; padding: .6rem .85rem; font: inherit; color: var(--text);
   border: 1.5px solid var(--border); border-radius: 12px; background: #fff; }
 input:hover { border-color: #b9c9d3; } input:focus { border-color: var(--teal-dark); outline: 3px solid var(--teal-soft); }
-.has-error input, .has-error select { border-color: var(--danger); }
+.has-error input { border-color: var(--danger); }
 .help { font-size: .82rem; color: var(--muted); margin: .3rem 0 0; } .preview { font-size: .85rem; color: var(--teal-dark); margin: .15rem 0 0; font-weight: 600; }
 .error { color: var(--danger); font-size: .88rem; font-weight: 600; margin: .3rem 0 0; }
 .note { font-size: .85rem; color: var(--muted); margin: .8rem 0 0; }
@@ -88,3 +88,10 @@ th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid var(--
   .stat-final { background: #fff; border-color: var(--navy); } .stat-final span, .stat-final strong { color: var(--navy); }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.segmented { border: 0; padding: 0; margin: 0 0 1rem; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.segmented legend { font-weight: 600; color: var(--navy); margin-bottom: .4rem; padding: 0; width: 100%; }
+.segmented label { display: inline-flex; align-items: center; min-height: 44px; padding: 0 1.2rem; border: 1.5px solid var(--border); border-radius: 999px; background: #fff; color: var(--navy); font-weight: 600; cursor: pointer; }
+.segmented label.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+.segmented label:has(:focus-visible) { outline: 3px solid var(--teal-dark); outline-offset: 2px; }
+.segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; }

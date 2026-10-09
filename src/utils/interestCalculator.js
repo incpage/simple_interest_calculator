@@ -1,7 +1,11 @@
-import { MAX_PRINCIPAL, MAX_RATE } from '../config/appConfig.js';
-import { parseISODate, diffDays, calendarDuration, daysInMonth, weeksAndDays, splitByMonth } from './dateCalculations.js';
+import { DAY_COUNT_BASIS, MAX_PRINCIPAL, MAX_RATE } from '../config/appConfig.js';
+import { parseISODate, diffDays, calendarDuration, weeksAndDays, splitByMonth } from './dateCalculations.js';
 
 export const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+/** Interest = Principal x Rate/100 x Days/basis  (full precision, unrounded). */
+export const interestFor = (principal, rate, days, basis = DAY_COUNT_BASIS) =>
+  (principal * rate * days) / (100 * basis);
 
 function parseNumber(v) {
   const s = String(v ?? '').trim();
@@ -11,7 +15,7 @@ function parseNumber(v) {
 }
 
 /** Returns an object of error keys (translated in the UI). Empty object = valid. */
-export function validateInputs({ principal, rate, ratePeriod = 'monthly', from, to }) {
+export function validateInputs({ principal, rate, rateType = 'monthly', from, to }, basis = DAY_COUNT_BASIS) {
   const errors = {};
   const p = parseNumber(principal);
   if (p.empty) errors.principal = 'principalRequired';
@@ -24,50 +28,60 @@ export function validateInputs({ principal, rate, ratePeriod = 'monthly', from, 
   else if (r.invalid) errors.rate = 'rateInvalid';
   else if (r.value < 0) errors.rate = 'rateNegative';
   else if (r.value > MAX_RATE) errors.rate = 'rateTooLarge';
-  if (ratePeriod !== 'monthly' && ratePeriod !== 'yearly') errors.ratePeriod = 'ratePeriodInvalid';
 
   const a = parseISODate(from);
   const b = parseISODate(to);
   if (!a) errors.from = 'fromInvalid';
   if (!b) errors.to = 'toInvalid';
   if (a && b && b.t < a.t) errors.to = 'toBeforeFrom';
+  if ((basis !== 365 && basis !== 366) || !['monthly', 'annual'].includes(rateType)) errors.config = 'configInvalid';
   return errors;
 }
 
-/** Pure calculation engine – independent of language, currency and UI. */
-export function calculateInterest(input) {
-  const errors = validateInputs(input);
+/**
+ * Pure calculation engine – independent of language, currency and UI.
+ *
+ * rateType 'monthly' (default): Interest = P x rate/100 x (calendar months + leftover days/30)
+ *   e.g. 100 at 2% per month for 1 month = 2.
+ * rateType 'annual': Interest = P x rate/100 x Days/basis (actual days, 365 by default).
+ */
+export function calculateInterest(input, { basis = DAY_COUNT_BASIS } = {}) {
+  const errors = validateInputs(input, basis);
   if (Object.keys(errors).length) return { ok: false, errors };
 
+  const rateType = input.rateType || 'monthly';
   const principal = Number(String(input.principal).trim());
   const rate = Number(String(input.rate).trim());
-  const ratePeriod = input.ratePeriod ?? 'monthly';
-  const monthlyRate = ratePeriod === 'yearly' ? rate / 12 : rate;
   const a = parseISODate(input.from);
   const b = parseISODate(input.to);
   const totalDays = diffDays(a, b);
+  const calendar = calendarDuration(a, b);
+  const totalMonths = calendar.years * 12 + calendar.months + calendar.days / 30;
 
-  // Each calendar month's simple interest is prorated by the portion of that
-  // month in the selected date range.
-  let cumulativeInterest = 0;
+  const rawInterest = rateType === 'monthly'
+    ? (principal * rate * totalMonths) / 100
+    : interestFor(principal, rate, totalDays, basis);
+  const interest = round2(rawInterest);
+  const monthlyRate = rateType === 'monthly' ? rate : rate / 12;
+  const monthlyInterest = round2((principal * monthlyRate) / 100);
+
+  // Each calendar-month segment gets its pro-rata (by days) share of the total.
+  // Segment = difference of rounded cumulative values, so segments sum exactly to the total.
+  let cumulativeDays = 0;
   let previous = 0;
   const segments = splitByMonth(a, b).map((s) => {
-    const segmentStart = parseISODate(s.start);
-    const daysInSegmentMonth = daysInMonth(segmentStart.y, segmentStart.m);
-    cumulativeInterest += (principal * monthlyRate * s.days) / (100 * daysInSegmentMonth);
-    const cumulative = round2(cumulativeInterest);
+    cumulativeDays += s.days;
+    const cumulative = round2((rawInterest * cumulativeDays) / totalDays);
     const segmentInterest = round2(cumulative - previous);
     previous = cumulative;
     return { ...s, interest: segmentInterest, cumulative };
   });
-  const interest = previous;
-  const monthlyInterest = round2((principal * monthlyRate) / 100);
 
   return {
-    ok: true, principal, rate, ratePeriod, monthlyRate,
+    ok: true, principal, rate, rateType, basis,
     from: input.from, to: input.to, totalDays,
     weeks: weeksAndDays(totalDays),
-    calendar: calendarDuration(a, b),
+    calendar, totalMonths,
     monthlyInterest, interest,
     total: round2(principal + interest),
     segments,

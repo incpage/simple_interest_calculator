@@ -21,6 +21,7 @@ function Field({ id, label, help, error, preview, children }) {
 
 export default function CalculatorForm({ values, errors, onChange, onCalculate, onReset, onSample }) {
   const { t, i18n } = useTranslation();
+  const monthly = values.rateType !== 'annual';
   const set = (k) => (e) => onChange({ ...values, [k]: e.target.value });
   const aria = (id, err) => ({
     'aria-invalid': !!err,
@@ -31,20 +32,24 @@ export default function CalculatorForm({ values, errors, onChange, onCalculate, 
   return (
     <form className="card" noValidate onSubmit={(e) => { e.preventDefault(); onCalculate(); }}>
       <h2>{t('form.heading')}</h2>
+      {errors.config && <p className="error" role="alert">{t(`errors.${errors.config}`)}</p>}
+      <fieldset className="segmented">
+        <legend>{t('form.rateType')}</legend>
+        {['monthly', 'annual'].map((v) => (
+          <label key={v} className={values.rateType === v ? 'on' : ''}>
+            <input type="radio" name="rateType" value={v} checked={values.rateType === v} onChange={set('rateType')} />
+            {t(v === 'monthly' ? 'form.perMonth' : 'form.perYear')}
+          </label>
+        ))}
+      </fieldset>
       <div className="grid-2">
         <Field id="principal" label={t('form.principal')} help={t('form.principalHelp')} error={errors.principal}>
           <input id="principal" type="text" inputMode="decimal" autoComplete="off" placeholder="100000"
                  value={values.principal} onChange={set('principal')} {...aria('principal', errors.principal)} />
         </Field>
-        <Field id="rate" label={t('form.rate')} help={t('form.rateHelp')} error={errors.rate || errors.ratePeriod}>
-          <select id="ratePeriod" value={values.ratePeriod} onChange={set('ratePeriod')}
-                  aria-label={t('form.ratePeriod')} {...aria('rate', errors.rate || errors.ratePeriod)}>
-            <option value="monthly">{t('form.monthly')}</option>
-            <option value="yearly">{t('form.yearly')}</option>
-          </select>
-          <input id="rate" type="text" inputMode="decimal" autoComplete="off"
-                 placeholder={values.ratePeriod === 'yearly' ? '12' : '1'}
-                 value={values.rate} onChange={set('rate')} {...aria('rate', errors.rate || errors.ratePeriod)} />
+        <Field id="rate" label={monthly ? t('form.rateMonthly') : t('form.rateAnnual')} help={monthly ? t('form.rateHelpMonthly') : t('form.rateHelpAnnual')} error={errors.rate}>
+          <input id="rate" type="text" inputMode="decimal" autoComplete="off" placeholder="12"
+                 value={values.rate} onChange={set('rate')} {...aria('rate', errors.rate)} />
         </Field>
         <Field id="from" label={t('form.from')} help={t('form.fromHelp')} error={errors.from} preview={preview(values.from)}>
           <input id="from" type="date" value={values.from} onChange={set('from')} {...aria('from', errors.from)} />
