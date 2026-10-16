@@ -3,10 +3,10 @@
 // 2. Create one ad unit per placement in AdSense and paste its numeric slot ID.
 // 3. Set enabled: true for each placement you want.
 // Placeholder values are never rendered as ads – nothing shows until real IDs are set.
-export const PUBLISHER_ID = 'ca-pub-XXXXXXXXXXXXXXXX'; // <-- PASTE YOUR PUBLISHER ID
+export const PUBLISHER_ID = 'ca-pub-1249143170747032'; // <-- PASTE YOUR PUBLISHER ID
 
 const slot = (slotId, minHeight) => ({
-  enabled: false,                 // <-- set true when ready
+  enabled: true,                 // <-- set true when ready
   clientId: PUBLISHER_ID,
   slotId,                         // <-- PASTE NUMERIC SLOT ID
   format: 'auto',
@@ -15,9 +15,9 @@ const slot = (slotId, minHeight) => ({
 });
 
 export const adsConfig = {
-  header: slot('0000000000', 90),
-  'calculator-bottom': slot('0000000000', 250),
-  'results-middle': slot('0000000000', 250),
-  sidebar: slot('0000000000', 600),
-  footer: slot('0000000000', 90),
+  header: slot('2880470238', 90),
+  'calculator-bottom': slot('2880470238', 250),
+  'results-middle': slot('2880470238', 250),
+  sidebar: slot('2880470238', 600),
+  footer: slot('2880470238', 90),
 };
